@@ -1,7 +1,9 @@
 import paho.mqtt.client as paho
 from paho.mqtt.client import MQTTMessage
 import mqtt_device
+from config_parser import parse_config
 from datetime import datetime
+import json
 
 
 class CarPark(mqtt_device.MqttDevice):
@@ -11,6 +13,7 @@ class CarPark(mqtt_device.MqttDevice):
         super().__init__(config)
         self.total_spaces = config['total-spaces']
         self.total_cars = config['total-cars']
+        self.temperature = config['temperature']
         self.client.on_message = self.on_message
         self.client.subscribe('sensor')
         self.client.loop_forever()
@@ -21,37 +24,41 @@ class CarPark(mqtt_device.MqttDevice):
         return available if available > 0 else 0
 
     def _publish_event(self):
-        readable_time = datetime.now().strftime('%H:%M')
-        print(f"TIME: {readable_time}, " +
-              f"SPACES: {self.available_spaces}, " +
-              f"TEMPC: 42") # TODO: Temperature
-        message = (f"TIME: {readable_time}, " +
-              f"SPACES: {self.available_spaces}, " +
-              f"TEMPC: 42")
-        self.client.publish('display', message)
+        payload = {
+            "time": datetime.now().strftime('%H:%M:%S'),
+            "spaces": self.available_spaces,
+            "temperature": self.temperature
+        }
+        print(payload)
+        self.client.publish('display', json.dumps(payload))
 
     def on_car_entry(self):
         self.total_cars += 1
         self._publish_event()
 
-
-
     def on_car_exit(self):
         self.total_cars -= 1
         self._publish_event()
 
-    def on_message(self, client, userdata, msg: MQTTMessage):
+    def on_message(self, client, userdata, msg: MQTTMessage):        
         payload = msg.payload.decode()
-        if 'exit' in payload:
-            self.on_car_exit()
-        else:
-            self.on_car_entry()
+        data = json.loads(payload)
 
+        # update temperature from sensor
+        self.temperature = data['temperature']
+
+        if data['state'] == 'exit':
+            self.on_car_exit()
+        elif data['state'] == 'enter':
+            self.on_car_entry()
+        else:
+            print('received invalid state!')
 
 if __name__ == '__main__':
-    config = {'name': "raf-park",
+    config = {'name': "carpark-coordinator",
               'total-spaces': 130,
               'total-cars': 0,
+              'temperature': 30,
               'location': 'L306',
               'topic-root': "lot",
               'broker': 'localhost',
