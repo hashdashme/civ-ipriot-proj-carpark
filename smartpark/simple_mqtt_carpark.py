@@ -55,17 +55,19 @@ class CarPark(mqtt_device.MqttDevice):
             print('received invalid state!')
 
 if __name__ == '__main__':
-    config = {'name': "carpark-coordinator",
-              'total-spaces': 130,
-              'total-cars': 0,
-              'temperature': 30,
-              'location': 'L306',
-              'topic-root': "lot",
-              'broker': 'localhost',
-              'port': 1883,
-              'topic-qualifier': 'entry',
-              'is_stuff': False
-              }
+    # config = {'name': "carpark-coordinator",
+    #           'total-spaces': 130,
+    #           'total-cars': 0,
+    #           'temperature': 30,
+    #           'location': 'L306',
+    #           'topic-root': "lot",
+    #           'broker': 'localhost',
+    #           'port': 1883,
+    #           'topic-qualifier': 'entry',
+    #           'is_stuff': False
+    #           }
+
+    config = parse_config('./smartpark/coordinator.json')
     # TODO: Read config from file
     car_park = CarPark(config)
     print("Carpark initialized")
